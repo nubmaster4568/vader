@@ -200,7 +200,7 @@ app.post('/addlocation', async (req, res) => {
 async function createWalletAddress(user_id) {
     try {
         const response = await axios.post('https://coinremitter.com/api/v3/LTC/get-new-address', {
-            api_key: '$2b$10$ZpskXdVsknpQzMrX5qAZTujyedQaz0Dxo1DQqlHi6sxoF5eUTJMZK',
+            api_key: 'wkey_kWA4aSuFGxeNgNN',
             password: 'test2023',
             label: user_id
         });
@@ -710,19 +710,21 @@ async function getLtcToUsdRate() {
 }
 app.post('/webhook', (req, res) => {
     const form = new formidable.IncomingForm();
-    res.status(200).send('Webhook received');
-
+    
     form.parse(req, async (err, fields, files) => {
         if (err) {
             console.error('Error parsing form:', err);
             res.status(400).send('Error parsing form');
             return;
         }
+    console.log(form, 'THIS IS FORM ------------------------')
+        res.status(200).send('Webhook received');
 
         const address = Array.isArray(fields.address) ? fields.address[0] : fields.address;
         const amount = Array.isArray(fields.amount) ? fields.amount[0] : fields.amount;
         const type = Array.isArray(fields.type) ? fields.type[0] : fields.type;
         const txId = Array.isArray(fields.id) ? fields.id[0] : fields.id;
+        console.log(fields, 'THIS IS FIELDS ------------------------')
 
         console.log('Received address:', address);
         console.log('Received amount:', amount);
