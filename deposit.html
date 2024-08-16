@@ -70,7 +70,16 @@
             <a target="blank" class="chakra-link css-ktc5z7" href="https://t.me/ShokoStory"><svg viewBox="0 0 16 16" focusable="false" class="chakra-icon css-1lgem63" xmlns="http://www.w3.org/2000/svg"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12l8-8m0 0H6.667M12 4v5.333"></path></svg><div class="css-1e6ma0l">Գնել LTC</div></a>
         </div>
     </div>
+    <div id="confirmationModal" class="modal">
+        <div class="modal-content">
+            <h2>Վստա՞հ եք</h2>
+            <p>Խնդրում ենք ուշադիր նայեք տեղանքը, միայն դրանից հետո կապվեք մեզ հետ:
 
+            Խնդրում ենք նկատի ունենալ, որ կեղծ մեղադրանքի համար կարող եք արգելափակվել մեր հարթակում</p>
+            <button id="confirmRedirect" class="modal-button">Վստահ եմ</button>
+            <button id="cancelRedirect" class="modal-button">Չեղարկել</button>
+        </div>
+    </div>
     <div class="Լիցքավորել-content2">
         <div class="Լիցքավորել-text">Պատմություն</div>
         <div class="wallet-block2">
@@ -203,20 +212,61 @@
                 transactionElement.className = 'transaction';
     
                 transactionElement.innerHTML = `
-                    <div class="transaction-date">${tx.date}</div>
-                    <div class="transaction-amount">${tx.amount} LTC</div>
-                    <div class="transaction-status ${tx.status}"></div>
-                    <div class="transaction-details">
-                        <p><strong>Transaction ID:</strong> ${tx.id} LTC</p>
-                        <p><strong>URL:</strong> ${tx.explorer_url}</p>
-                        <p><strong>Հաստատումներ:</strong> ${tx.confirmations}</p>
-                    </div>
-                `;
+    <div class="transaction-date">${tx.date}</div>
+    <div class="transaction-amount">${tx.amount} LTC</div>
+    <div class="transaction-status ${tx.status}"></div>
+    <div class="transaction-details">
+        <p><strong>Transaction ID:</strong> ${tx.id} LTC</p>
+        <p><strong>URL:</strong> ${tx.explorer_url}</p>
+        <p><strong>Հաստատումներ:</strong> ${tx.confirmations}</p>
+            <button class="not-found-button">
+            Ես չգտա իմ ապրանքը
+        </button>
+    </div>
+`;
+
+
     
                 transactionsContainer.appendChild(transactionElement);
             });
         }
+
+        hideModal();
+
+        function showModal() {
+    document.getElementById('confirmationModal').style.display = 'flex';
+}
+
+// Hide the modal
+function hideModal() {
+    document.getElementById('confirmationModal').style.display = 'none';
+}
+
+// Event handler for the .not-found-button click event
+$(document).on('click', '.not-found-button', function(event) {
+    event.stopPropagation(); // Prevents the click event from triggering the toggle
+
+    // Show the confirmation modal
+    showModal();
     
+    // Set up the confirm button to redirect on click
+    document.getElementById('confirmRedirect').onclick = function() {
+        window.location.href = 'https://t.me/DarthVader420';
+    };
+
+    // Set up the cancel button to close the modal on click
+    document.getElementById('cancelRedirect').onclick = function() {
+        hideModal();
+    };
+});
+
+// Close the modal if the user clicks outside of the modal content
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        hideModal();
+    }
+};
+        
         // Copy wallet address to clipboard
         $('#copy-button').click(function() {
             const walletAddress = walletAddressInput.value;
@@ -228,9 +278,13 @@
         });
     
         // Toggle transaction details on click
-        $(document).on('click', '.transaction', function() {
-            $(this).toggleClass('expanded');
-        });
+        $(document).on('click', '.transaction', function(event) {
+    // Check if the click target is not inside .not-found-button
+    if (!$(event.target).closest('.not-found-button').length) {
+        // Toggle the expanded class on the transaction
+        $(this).toggleClass('expanded');
+    }
+});
     });
     </script>
 </body>
