@@ -805,104 +805,126 @@ app.post('/webhook', (req, res) => {
                     [trimmedAddressLabel]
                 );
 
-                if (productResult.rows.length > 0) {
-                    const row = productResult.rows[0];
-                    const latitude = (row.latitude || '').trim();
-                    const longitude = (row.longitude || '').trim();
-                
-                    // Define file paths for the images
-                    const locationImagePath = path.join(__dirname, 'location_image.jpg');
-                    const additionalImagePath = path.join(__dirname, 'additional_image.jpg');
-                
-                    // Handle location image
-                    if (row.location_image) {
-                        fs.writeFile(locationImagePath, row.location_image, 'base64', async (err) => {
-                            if (err) {
-                                console.error('Error saving location image:', err.message);
-                                return res.status(500).send('Error saving location image');
-                            }
-                            console.log('Location image saved successfully.');
-                
-                            // Handle additional image if present
-                            if (row.additional_image) {
-                                fs.writeFile(additionalImagePath, row.additional_image, 'base64', async (err) => {
+                if (ordersResult.rows.length > 0) {
+                    const amountInLtc = ordersResult.rows[0].amount_in_ltc;
+                    const productId = ordersResult.rows[0].product_id;
+
+                    console.log('Amount in LTC from database:', amountInLtc);
+
+                    const acceptableDifference = 1; // $1 tolerance
+                    if (amountInFloat >= amountInLtc - acceptableDifference) {
+                        console.log('Transaction valid.');
+
+                        // Deduct the amount needed for the product
+                        await client.query(
+                            'UPDATE users SET balance = balance - $1 WHERE wallet_address = $2',
+                            [amountInLtc * ltcToUsdRate, trimmedAddressLabel]
+                        );
+                        console.log('User balance updated after deducting product price.');
+
+                        // Delete the transaction from the orders table
+                        await client.query('DELETE FROM orders WHERE product_id = $1 AND wallet_address = $2', [productId, trimmedAddressLabel]);
+                        console.log('Transaction deleted successfully.');
+
+                        // Fetch product information for sending to user
+                        const productResult = await client.query(
+                            'SELECT location_image, additional_image, latitude, longitude FROM products WHERE identifier = $1',
+                            [productId]
+                        );
+
+                        if (productResult.rows.length > 0) {
+                            const row = productResult.rows[0];
+                            const latitude = (row.latitude || '').trim();
+                            const longitude = (row.longitude || '').trim();
+                        
+                            // Define file paths for the images
+                            const locationImagePath = path.join(__dirname, 'location_image.jpg');
+                            const additionalImagePath = path.join(__dirname, 'additional_image.jpg');
+                        
+                            // Handle location image
+                            if (row.location_image) {
+                                fs.writeFile(locationImagePath, row.location_image, 'base64', async (err) => {
                                     if (err) {
-                                        console.error('Error saving additional image:', err.message);
-                                        return res.status(500).send('Error saving additional image');
+                                        console.error('Error saving location image:', err.message);
+                                        return res.status(500).send('Error saving location image');
                                     }
-                                    console.log('Additional image saved successfully.');
-                
-                                    try {
-                                        // Send the location image to the user via Telegram
-                                        await bot.telegram.sendPhoto(userId, { source: locationImagePath });
-                                        console.log('Location image sent successfully.');
-                
-                                        // Send the additional image to the user via Telegram
-                                        await bot.telegram.sendPhoto(userId, { source: additionalImagePath });
-                                        console.log('Additional image sent successfully.');
-                
-                                        // Delete the image files after sending
-                                        fs.unlink(locationImagePath, (err) => {
+                                    console.log('Location image saved successfully.');
+                        
+                                    // Handle additional image if present
+                                    if (row.additional_image) {
+                                        fs.writeFile(additionalImagePath, row.additional_image, 'base64', async (err) => {
                                             if (err) {
-                                                console.error('Error deleting location image:', err.message);
-                                            } else {
-                                                console.log('Location image deleted successfully.');
+                                                console.error('Error saving additional image:', err.message);
+                                                return res.status(500).send('Error saving additional image');
+                                            }
+                                            console.log('Additional image saved successfully.');
+                        
+                                            try {
+                                                // Send the location image to the user via Telegram
+                                                await bot.telegram.sendPhoto(userId, { source: locationImagePath });
+                                                console.log('Location image sent successfully.');
+                        
+                                                // Send the additional image to the user via Telegram
+                                                await bot.telegram.sendPhoto(userId, { source: additionalImagePath });
+                                                console.log('Additional image sent successfully.');
+                        
+                                                // Delete the image files after sending
+                                                fs.unlink(locationImagePath, (err) => {
+                                                    if (err) {
+                                                        console.error('Error deleting location image:', err.message);
+                                                    } else {
+                                                        console.log('Location image deleted successfully.');
+                                                    }
+                                                });
+                        
+                                                fs.unlink(additionalImagePath, (err) => {
+                                                    if (err) {
+                                                        console.error('Error deleting additional image:', err.message);
+                                                    } else {
+                                                        console.log('Additional image deleted successfully.');
+                                                    }
+                                                });
+                        
+                                                // Send confirmation message to user
+                                                await bot.telegram.sendMessage(
+                                                    userId,
+                                                    `Ձեր գործարքը վավեր է և հաջողությամբ մշակվել է:\nԿոորդինատներ : ${longitude}, ${latitude} \n https://yandex.com/maps/?ll=${longitude}%2C${latitude}`,
+                                                    { parse_mode: 'HTML' }
+                                                );
+                                            } catch (error) {
+                                                console.error('Error sending images or message to Telegram:', error.message);
+                                                return res.status(500).send('Error sending images or message to Telegram');
                                             }
                                         });
-                
-                                        fs.unlink(additionalImagePath, (err) => {
-                                            if (err) {
-                                                console.error('Error deleting additional image:', err.message);
-                                            } else {
-                                                console.log('Additional image deleted successfully.');
-                                            }
-                                        });
-                
-                                        // Send confirmation message to user
-                                        await bot.telegram.sendMessage(
-                                            userId,
-                                            `Ձեր գործարքը վավեր է և հաջողությամբ մշակվել է:\nԿոորդինատներ : ${longitude}, ${latitude} \n https://yandex.com/maps/?ll=${longitude}%2C${latitude}`,
-                                            { parse_mode: 'HTML' }
-                                        );
-                                    } catch (error) {
-                                        console.error('Error sending images or message to Telegram:', error.message);
-                                        return res.status(500).send('Error sending images or message to Telegram');
                                     }
                                 });
+
+                                await client.query('DELETE FROM products WHERE identifier = $1', [productId]);
+                                console.log('Product deleted successfully.');
                             } else {
-                                console.log('No additional image found for the product.');
-                                try {
-                                    // Send the location image only
-                                    await bot.telegram.sendPhoto(userId, { source: locationImagePath });
-                                    console.log('Location image sent successfully.');
-                
-                                    // Delete the location image file after sending
-                                    fs.unlink(locationImagePath, (err) => {
-                                        if (err) {
-                                            console.error('Error deleting location image:', err.message);
-                                        } else {
-                                            console.log('Location image deleted successfully.');
-                                        }
-                                    });
-                
-                                    // Send confirmation message to user
-                                    await bot.telegram.sendMessage(
-                                        userId,
-                                        `Ձեր գործարքը վավեր է և հաջողությամբ մշակվել է:\nԿոորդինատներ : ${longitude}, ${latitude} \n https://yandex.com/maps/?ll=${longitude}%2C${latitude}`,
-                                        { parse_mode: 'HTML' }
-                                    );
-                                } catch (error) {
-                                    console.error('Error sending image or message to Telegram:', error.message);
-                                    return res.status(500).send('Error sending image or message to Telegram');
-                                }
+                                console.log('No location image found for the product.');
+                                // Send a message without image if needed
+                                await bot.telegram.sendMessage(
+                                    userId,
+                                    'Ձեր գործարքը վավեր է և հաջողությամբ մշակվել է:'
+                                );
+
+                                // Send confirmation message to user
+                                await bot.telegram.sendMessage(
+                                    userId,
+                                    `Ձեր գործարքը վավեր է և հաջողությամբ մշակվել է:\nԿոորդինատներ : ${longitude}, ${latitude} \n https://yandex.com/maps/?ll=${longitude}%2C${latitude}`,
+                                    { parse_mode: 'HTML' }
+                                );
                             }
-                
-                            // Delete the product from the database
-                            await client.query('DELETE FROM products WHERE identifier = $1', [productId]);
-                            console.log('Product deleted successfully.');
-                        });
-                    }
-                         else {
+                        } else {
+                            console.log('No product found for the given product ID.');
+                            await bot.telegram.sendMessage(
+                                userId,
+                                `Ստացել ենք ձեր փոխանցումը բայց չկարողացանք հաստատել ապրանքի առկայությունը, խնդրում ենք կապնվել օպերատորին`,
+                                { parse_mode: 'HTML' }
+                            );
+                        }
+                    } else {
                         console.log('Transaction amount is less than required. Amount:', amountInFloat, 'Required:', amountInLtc);
                         await bot.telegram.sendMessage(
                             userId,
