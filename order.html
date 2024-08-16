@@ -144,8 +144,9 @@
                     if (LTCDiv) {
                         LTCDiv.textContent = `${amountInLTC.toFixed(3)} LTC`;
                     }
-
-                        createTransaction(userId, price, amountInLTC, sessionStorage.getItem('wallet'));
+                        setTimeout(() => {
+                            createTransaction(userId, price, amountInLTC, sessionStorage.getItem('wallet'));
+                        }, 800);
 
                 } else {
                     console.error('Litecoin data not available');
