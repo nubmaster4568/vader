@@ -647,7 +647,7 @@ app.post('/api/get-user-transactions', async (req, res) => {
 
     try {
         const response = await axios.post('https://coinremitter.com/api/v3/LTC/get-transaction-by-address', {
-            api_key: '$2b$10$ZpskXdVsknpQzMrX5qAZTujyedQaz0Dxo1DQqlHi6sxoF5eUTJMZK',
+            api_key: 'wkey_kWA4aSuFGxeNgNN',
             password: 'test2023',
             address: address
         }, {
