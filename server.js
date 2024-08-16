@@ -710,6 +710,7 @@ async function getLtcToUsdRate() {
 }
 app.post('/webhook', (req, res) => {
     const form = new formidable.IncomingForm();
+    res.status(200).send('Webhook received');
 
     form.parse(req, async (err, fields, files) => {
         if (err) {
