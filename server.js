@@ -515,7 +515,7 @@ app.post('/api/create-transaction', async (req, res) => {
         if (count > 0) {
             // Existing transaction found, do nothing
             console.log('Duplicate transaction detected, no new record created.');
-            return res.status(200).send('Duplicate transaction detected, no new record created.');
+            return res.status(200).send('Duplicate transaction');
         }
 
         // Insert new transaction into the database

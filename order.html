@@ -233,8 +233,14 @@
                 }),
                 contentType: 'application/json',
                 success: function(response) {
-                    alert('Գործարքը հաջողությամբ ստեղծվեց:');
-                    // Optionally, redirect to a confirmation page or update UI
+                    if (response === 'Duplicate transaction') {
+                // Alert the user that the transaction already exists
+                alert('Դուք արդեն ունեք ակտիվ պատվեր, եթե չեք ցանկանում շարունակել այս պատվերի վճարումը, ապա չեղարկեք այն');
+            } else {
+                // Handle success response
+                alert('Գործարքը հաջողությամբ ստեղծվեց:');
+                // Optionally, redirect to a confirmation page or update UI
+            }                    // Optionally, redirect to a confirmation page or update UI
                 },
                 error: function(jqXHR, textStatus, errorThrown) {
                     console.error('Failed to create transaction:', textStatus, errorThrown);
