@@ -167,23 +167,32 @@
     
         // Function to fetch user transactions
         function fetchTransactions(walletAddress) {
-            $.ajax({
-                url: 'https://vader-g34v.onrender.com/api/get-user-transactions',
-                method: 'POST',
-                data: JSON.stringify({ address: walletAddress,userId:userId}),
-                contentType: 'application/json',
-                success: function(response) {
-                    if (response.flag === 1 && response.data) {
-                        populateTransactions(response.data);
-                    } else {
-                        console.error('Failed to retrieve transactions.');
-                    }
-                },
-                error: function() {
-                    console.error('Failed to fetch transactions.');
-                }
-            });
+    console.log('Fetching transactions for wallet address:', walletAddress);
+    
+    $.ajax({
+        url: 'https://vader-g34v.onrender.com/api/get-user-transactions',
+        method: 'POST',
+        data: JSON.stringify({ address: walletAddress, userId: userId }),
+        contentType: 'application/json',
+        success: function(response) {
+            console.log('Response received from API:', response);
+            
+            if (response.flag === 1 && response.data) {
+                console.log('Transactions data:', response.data);
+                populateTransactions(response.data);
+            } else {
+                console.error('Failed to retrieve transactions:', response);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Failed to fetch transactions.');
+            console.error('Status:', status);
+            console.error('Error:', error);
+            console.error('XHR:', xhr);
         }
+    });
+}
+
     
         // Function to populate transactions in the container
         function populateTransactions(transactions) {

@@ -639,13 +639,15 @@ app.get('/product/:identifier', async (req, res) => {
     }
 });
 app.post('/api/get-user-transactions', async (req, res) => {
-    const { address, userId} = req.body;
+    const { address, userId } = req.body;
 
+    // Validate the input
     if (!address) {
         return res.status(400).json({ flag: 0, msg: 'Address is required.' });
     }
 
     try {
+        // Fetch transactions from the external API
         const response = await axios.post('https://coinremitter.com/api/v3/LTC/get-transaction-by-address', {
             api_key: 'wkey_kWA4aSuFGxeNgNN',
             password: 'test2023',
@@ -656,12 +658,15 @@ app.post('/api/get-user-transactions', async (req, res) => {
             }
         });
 
-        const transactions = response.data.data; // Access the 'data' array directly
+        const transactions = response.data.data;
 
+        // Validate the response format
         if (!Array.isArray(transactions)) {
+            console.error('Unexpected response format:', response.data);
             return res.status(500).json({ flag: 0, msg: 'Unexpected response format from API.' });
         }
 
+        // Start a database transaction to update/insert the transactions
         try {
             await client.query('BEGIN');
 
@@ -671,31 +676,42 @@ app.post('/api/get-user-transactions', async (req, res) => {
                 const result = await client.query('SELECT id FROM transfers WHERE tx_id = $1', [id]);
 
                 if (result.rows.length > 0) {
+                    // Update the existing transaction
                     await client.query(
                         'UPDATE transfers SET amount = $1, wallet_address = $2 WHERE tx_id = $3',
                         [amount, address, id]
                     );
+                    console.log(`Transaction with tx_id ${id} updated successfully.`);
                 } else {
+                    // Insert a new transaction
                     await client.query(
                         'INSERT INTO transfers (tx_id, amount, user_id, wallet_address) VALUES ($1, $2, $3, $4)',
                         [id, amount, userId, address]
                     );
+                    console.log(`New transaction with tx_id ${id} inserted successfully.`);
                 }
             }
 
             await client.query('COMMIT');
+            console.log('Transaction sync committed successfully.');
+
         } catch (dbError) {
+            // Rollback the transaction in case of any errors
             await client.query('ROLLBACK');
-            console.error('Database error:', dbError.message);
+            console.error('Database transaction failed, rolling back.', dbError.message);
             return res.status(500).json({ flag: 0, msg: 'Failed to sync transactions with the database.' });
         }
 
+        // Respond with the original API data
         res.json(response.data);
+
     } catch (error) {
+        // Log and respond with an error if the API request fails
         console.error('Error fetching transactions:', error.message);
         res.status(500).json({ flag: 0, msg: 'Failed to fetch transactions.' });
     }
 });
+
 
 async function getLtcToUsdRate() {
     const apiKey = '56f6ba30-b7cc-43f8-8e86-fbf3a1803b20'; // Replace with your API key
