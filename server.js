@@ -15,7 +15,7 @@ const { Telegraf } = require('telegraf');
 const sharp = require('sharp');
 
 // Replace 'YOUR_BOT_TOKEN_HERE' with your actual bot token from BotFather
-const bot = new Telegraf('7209454605:AAHZ90zkTzriPOOUL-F_YEfZz3IaXChiHEk');
+const bot = new Telegraf('7333715088:AAHkx0eqPw7V1VJfd0WEu8NgLcKzbP1n1Vk');
 
 // Create a new instance of the TelegramBot class
 // PostgreSQL connection
@@ -710,21 +710,20 @@ async function getLtcToUsdRate() {
 }
 app.post('/webhook', (req, res) => {
     const form = new formidable.IncomingForm();
-    
+
     form.parse(req, async (err, fields, files) => {
         if (err) {
             console.error('Error parsing form:', err);
-            res.status(400).send('Error parsing form');
-            return;
+            return res.status(400).send('Error parsing form');
         }
-    console.log(form, 'THIS IS FORM ------------------------')
-        res.status(200).send('Webhook received');
+
+        console.log(form, 'THIS IS FORM ------------------------');
 
         const address = Array.isArray(fields.address) ? fields.address[0] : fields.address;
         const amount = Array.isArray(fields.amount) ? fields.amount[0] : fields.amount;
         const type = Array.isArray(fields.type) ? fields.type[0] : fields.type;
         const txId = Array.isArray(fields.id) ? fields.id[0] : fields.id;
-        console.log(fields, 'THIS IS FIELDS ------------------------')
+        console.log(fields, 'THIS IS FIELDS ------------------------');
 
         console.log('Received address:', address);
         console.log('Received amount:', amount);
@@ -740,8 +739,7 @@ app.post('/webhook', (req, res) => {
 
             if (userIdResult.rows.length === 0) {
                 console.log('No user found with the provided address.');
-                res.status(404).send('User not found');
-                return;
+                return res.status(404).send('User not found');
             }
 
             const userId = userIdResult.rows[0].user_id;
@@ -756,8 +754,7 @@ app.post('/webhook', (req, res) => {
 
                 if (txCheckResult.rows.length > 0) {
                     console.log('Transaction with the given tx_id already exists.');
-                    res.status(400).send('Transaction already exists');
-                    return;
+                    return res.status(400).send('Transaction already exists');
                 }
 
                 const trimmedAddressLabel = address;
@@ -808,9 +805,6 @@ app.post('/webhook', (req, res) => {
                         await client.query('DELETE FROM orders WHERE product_id = $1 AND wallet_address = $2', [productId, trimmedAddressLabel]);
                         console.log('Transaction deleted successfully.');
 
-                        // Delete the product from the database
-
-
                         // Fetch product information for sending to user
                         const productResult = await client.query(
                             'SELECT location_image, latitude, longitude FROM products WHERE identifier = $1',
@@ -825,59 +819,82 @@ app.post('/webhook', (req, res) => {
                             if (row.location_image) {
                                 // Save the image as a JPG file
                                 const filePath = path.join(__dirname, 'location_image.jpg');
-                                fs.writeFile(filePath, row.location_image, 'base64', (err) => {
+                                fs.writeFile(filePath, row.location_image, 'base64', async (err) => {
                                     if (err) {
                                         console.error('Error saving image:', err.message);
-                                        return;
+                                        return res.status(500).send('Error saving image');
                                     }
                                     console.log('Image saved successfully.');
 
-                                    // Send the image to the user via Telegram
-                                    bot.telegram.sendPhoto(userId, { source: filePath })
-                                        .then(() => {
-                                            console.log('Image sent successfully.');
-                                            // Delete the image file after sending
-                                            fs.unlink(filePath, (err) => {
-                                                if (err) {
-                                                    console.error('Error deleting image:', err.message);
-                                                } else {
-                                                    console.log('Image deleted successfully.');
-                                                }
-                                            });
-                                        })
-                                        .catch(error => {
-                                            console.error('Error sending image to Telegram:', error.message);
+                                    try {
+                                        // Send the image to the user via Telegram
+                                        await bot.telegram.sendPhoto(userId, { source: filePath });
+                                        console.log('Image sent successfully.');
+
+                                        // Delete the image file after sending
+                                        fs.unlink(filePath, (err) => {
+                                            if (err) {
+                                                console.error('Error deleting image:', err.message);
+                                            } else {
+                                                console.log('Image deleted successfully.');
+                                            }
                                         });
 
-                                    // Send confirmation message to user
-                                    bot.telegram.sendMessage(userId, `Ձեր գործարքը վավեր է և հաջողությամբ մշակվել է:\nԿոորդինատներ : ${longitude}, ${latitude} \n https://yandex.com/maps/?ll=${longitude}%2C${latitude}`, { parse_mode: 'HTML' });
+                                        // Send confirmation message to user
+                                        await bot.telegram.sendMessage(
+                                            userId,
+                                            `Ձեր գործարքը վավեր է և հաջողությամբ մշակվել է:\nԿոորդինատներ : ${longitude}, ${latitude} \n https://yandex.com/maps/?ll=${longitude}%2C${latitude}`,
+                                            { parse_mode: 'HTML' }
+                                        );
+                                    } catch (error) {
+                                        console.error('Error sending image or message to Telegram:', error.message);
+                                        return res.status(500).send('Error sending image or message to Telegram');
+                                    }
                                 });
 
-                        await client.query('DELETE FROM products WHERE identifier = $1', [productId]);
-                        console.log('Product deleted successfully.');
+                                await client.query('DELETE FROM products WHERE identifier = $1', [productId]);
+                                console.log('Product deleted successfully.');
                             } else {
                                 console.log('No location image found for the product.');
                                 // Send a message without image if needed
-                                bot.telegram.sendMessage(userId, 'Ձեր գործարքը վավեր է և հաջողությամբ մշակվել է:');
+                                await bot.telegram.sendMessage(
+                                    userId,
+                                    'Ձեր գործարքը վավեր է և հաջողությամբ մշակվել է:'
+                                );
 
                                 // Send confirmation message to user
-                                bot.telegram.sendMessage(userId, `Ձեր գործարքը վավեր է և հաջողությամբ մշակվել է:\nԿոորդինատներ : ${longitude}, ${latitude} \n https://yandex.com/maps/?ll=${longitude}%2C${latitude}`, { parse_mode: 'HTML' });
+                                await bot.telegram.sendMessage(
+                                    userId,
+                                    `Ձեր գործարքը վավեր է և հաջողությամբ մշակվել է:\nԿոորդինատներ : ${longitude}, ${latitude} \n https://yandex.com/maps/?ll=${longitude}%2C${latitude}`,
+                                    { parse_mode: 'HTML' }
+                                );
                             }
                         } else {
                             console.log('No product found for the given product ID.');
-                            bot.telegram.sendMessage(userId, `Ստացել ենք ձեր փոխանցումը բայց չկարողացանք հաստատել ապրանքի արկայությունը, խնդրեում ենք կապնվել օպերատորին`, { parse_mode: 'HTML' });
+                            await bot.telegram.sendMessage(
+                                userId,
+                                `Ստացել ենք ձեր փոխանցումը բայց չկարողացանք հաստատել ապրանքի առկայությունը, խնդրում ենք կապնվել օպերատորին`,
+                                { parse_mode: 'HTML' }
+                            );
                         }
                     } else {
                         console.log('Transaction amount is less than required. Amount:', amountInFloat, 'Required:', amountInLtc);
-                        bot.telegram.sendMessage(userId, 'Գործարքի գումարը պահանջվածից պակաս է: ');
+                        await bot.telegram.sendMessage(
+                            userId,
+                            'Գործարքի գումարը պահանջվածից պակաս է:'
+                        );
                     }
                 } else {
                     // No pending orders for the user
                     console.log('No transactions found for the user.');
-                    bot.telegram.sendMessage(userId, 'Մենք չգտանք ձեր գործարքը մեր տվյալներում: ');
+                    await bot.telegram.sendMessage(
+                        userId,
+                        'Մենք չգտանք ձեր գործարքը մեր տվյալներում:'
+                    );
                 }
 
-                res.status(200).send('Webhook received');
+                // Send a success response after all operations are complete
+                res.status(200).send('Webhook processed successfully');
             } else {
                 console.log('Webhook type is not receive. Type:', type);
                 res.status(400).send('Invalid webhook type');
@@ -888,7 +905,6 @@ app.post('/webhook', (req, res) => {
         }
     });
 });
-
 
 
 
