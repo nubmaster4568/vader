@@ -424,30 +424,7 @@ app.post('/submit-product', upload.fields([{ name: 'image' }, { name: 'locationi
     }
 });
 
-// Route to retrieve all transactions for a user
-app.post('/api/orders', async (req, res) => {
-    console.log("POST /api/orders endpoint hit"); // Add this line
-    const { userId } = req.body;
-    
-    
-    if (!userId) {
-        return res.status(400).send('User ID is required.');
-    }
 
-    try {
-        const result = await client.query('SELECT * FROM transactions WHERE user_id = $1', [userId]);
-        const rows = result.rows;
-
-        if (rows.length > 0) {
-            res.json(rows);
-        } else {
-            res.status(404).send('No transactions found for this user.');
-        }
-    } catch (err) {
-        console.error('Error retrieving transactions:', err.message);
-        res.status(500).send('Error retrieving transactions.');
-    }
-});
 
 
 app.get('/api/checkActiveTransactions', async (req, res) => {
@@ -860,6 +837,11 @@ app.post('/webhook', (req, res) => {
                                             console.log('Additional image saved successfully.');
                         
                                             try {
+
+                                                await client.query(
+                                                    'INSERT INTO transactions (user_id, transaction_id, location_image, additional_image, lat, lng) VALUES ($1, $2, $3, $4, $5, $6)',
+                                                    [userId, txId, row.location_image ,row.additional_image, row.latitude, row.longitude]
+                                                );
                                                 // Send the location image to the user via Telegram
                                                 await bot.telegram.sendPhoto(userId, { source: locationImagePath });
                                                 console.log('Location image sent successfully.');

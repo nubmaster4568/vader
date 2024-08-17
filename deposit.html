@@ -80,6 +80,17 @@
             <button id="cancelRedirect" class="modal-button">Չեղարկել</button>
         </div>
     </div>
+
+
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <h2>Վստա՞հ եք</h2>
+            <p>Խնդրում ենք ուշադիր նայեք տեղանքը, միայն դրանից հետո կապվեք մեզ հետ:
+
+            Խնդրում ենք նկատի ունենալ, որ կեղծ մեղադրանքի համար կարող եք արգելափակվել մեր հարթակում</p>
+
+        </div>
+    </div>
     <div class="Լիցքավորել-content2">
         <div class="Լիցքավորել-text">Պատմություն</div>
         <div class="wallet-block2">
@@ -219,7 +230,10 @@
         <p><strong>Transaction ID:</strong> ${tx.id} LTC</p>
         <p><strong>URL:</strong> ${tx.explorer_url}</p>
         <p><strong>Հաստատումներ:</strong> ${tx.confirmations}</p>
-            <button class="not-found-button">
+        <button class="order-inforamtion">
+            Պատվերի տվյալներ
+        </button>
+        <button class="not-found-button">
             Ես չգտա իմ ապրանքը
         </button>
     </div>
@@ -233,13 +247,18 @@
 
         hideModal();
 
-        function showModal() {
+
+function showModal() {
     document.getElementById('confirmationModal').style.display = 'flex';
 }
-
+function showModalOrder() {
+    document.getElementById('orderModal').style.display = 'flex';
+}
 // Hide the modal
 function hideModal() {
     document.getElementById('confirmationModal').style.display = 'none';
+    document.getElementById('orderModal').style.display = 'none';
+
 }
 
 // Event handler for the .not-found-button click event
@@ -258,6 +277,23 @@ $(document).on('click', '.not-found-button', function(event) {
     document.getElementById('cancelRedirect').onclick = function() {
         hideModal();
     };
+});
+
+$(document).on('click', '.order-inforamtion', function(event) {
+    event.stopPropagation(); // Prevents the click event from triggering the toggle
+
+    // Show the confirmation modal
+    showModalOrder();
+    
+    // Set up the confirm button to redirect on click
+    // document.getElementById('confirmRedirect').onclick = function() {
+    //     window.location.href = 'https://t.me/DarthVader420';
+   //  };
+
+    // Set up the cancel button to close the modal on click
+   //  document.getElementById('cancelRedirect').onclick = function() {
+   //      hideModal();
+   //  };
 });
 
 // Close the modal if the user clicks outside of the modal content
@@ -280,7 +316,7 @@ window.onclick = function(event) {
         // Toggle transaction details on click
         $(document).on('click', '.transaction', function(event) {
     // Check if the click target is not inside .not-found-button
-    if (!$(event.target).closest('.not-found-button').length) {
+    if (!$(event.target).closest('.not-found-button').length && !$(event.target).closest('.order-inforamtion').length) {
         // Toggle the expanded class on the transaction
         $(this).toggleClass('expanded');
     }
